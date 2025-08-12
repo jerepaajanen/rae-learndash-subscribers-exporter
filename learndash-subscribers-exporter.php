@@ -50,7 +50,7 @@ function ld_export_page() {
     <div class="wrap">
         <h1>Export Learndash Subscribers</h1>
         
-        <div class="card">
+        <div class="card rae-ld-exporter" id="rae-ld-exporter">
             <h2>Export Options</h2>
             <form method="post">
                 <?php wp_nonce_field('ld_export_action', 'ld_export_nonce'); ?>
@@ -77,7 +77,7 @@ function ld_export_page() {
                         </td>
                     </tr>
                     
-                    <tr id="course-selection" style="display: none;">
+                    <tr id="course-selection">
                         <th scope="row">Select Course:</th>
                         <td>
                             <select name="course_id" id="course_id">
@@ -96,21 +96,13 @@ function ld_export_page() {
                 <p class="submit">
                     <input type="submit" name="export_ld_emails" class="button button-primary" value="Export to Excel">
                 </p>
+
+                <div id="rae-export-summary">
+                    <span id="export-count-display" class="count-display" role="status" aria-live="polite"></span>
+                </div>
             </form>
         </div>
     </div>
-    
-    <script>
-    jQuery(document).ready(function($) {
-        $('input[name="export_type"]').change(function() {
-            if ($(this).val() === 'specific') {
-                $('#course-selection').show();
-            } else {
-                $('#course-selection').hide();
-            }
-        });
-    });
-    </script>
     <?php
 }
 
@@ -253,4 +245,93 @@ function ld_export_subscriber_emails($export_type = 'all', $course_id = 0) {
     fclose($output);
     exit;
 }
+
+// AJAX handler for getting subscriber counts
+add_action('wp_ajax_ld_get_subscriber_count', 'ld_get_subscriber_count_ajax');
+
+function ld_get_subscriber_count_ajax() {
+    // Check nonce for security
+    if (!check_ajax_referer('ld_count_nonce', 'nonce', false)) {
+        wp_send_json_error('Invalid nonce');
+        return;
+    }
+
+    $export_type = sanitize_text_field($_POST['export_type'] ?? 'all');
+    $course_id = isset($_POST['course_id']) ? absint($_POST['course_id']) : 0;
+    
+    try {
+        $count = ld_get_subscriber_count($export_type, $course_id);
+        wp_send_json_success(['count' => $count]);
+    } catch (Exception $e) {
+        error_log('LD Exporter Count Error: ' . $e->getMessage());
+        wp_send_json_error('Error calculating count: ' . $e->getMessage());
+    }
+}
+
+// Function to get subscriber count based on export type
+function ld_get_subscriber_count($export_type = 'all', $course_id = 0) {
+    try {
+        // Set up the query for subscribers
+        $args = [
+            'role' => 'subscriber',
+            'number' => -1,
+            'fields' => 'ID' // Get only IDs as array
+        ];
+        
+        // Get all subscriber IDs
+        $user_ids = get_users($args);
+        $total_subscribers = count($user_ids);
+        
+        if ($export_type === 'all') {
+            return $total_subscribers;
+        }
+        
+        // For enrolled and specific course counts, we need LearnDash functions
+        if (!function_exists('learndash_user_get_enrolled_courses')) {
+            return 0; // LearnDash not available
+        }
+        
+        $count = 0;
+        
+        foreach ($user_ids as $user_id) {
+            $enrolled_courses = learndash_user_get_enrolled_courses($user_id);
+            
+            if ($export_type === 'enrolled') {
+                // Count users enrolled in any course
+                if (!empty($enrolled_courses)) {
+                    $count++;
+                }
+            } elseif ($export_type === 'specific' && $course_id > 0) {
+                // Count users enrolled in specific course
+                if (is_array($enrolled_courses) && in_array($course_id, $enrolled_courses)) {
+                    $count++;
+                }
+            }
+        }
+        
+        return $count;
+        
+    } catch (Exception $e) {
+        error_log('LD Exporter Count Calculation Error: ' . $e->getMessage());
+        throw $e;
+    }
+}
+
+// Enqueue scripts and styles for admin page
+add_action('admin_enqueue_scripts', function($hook) {
+    if ($hook !== 'users_page_ld-subscribers-export') {
+        return;
+    }
+
+    wp_enqueue_style('ld-exporter-admin', plugin_dir_url(__FILE__) . 'admin.css', [], '1.0');
+
+    wp_enqueue_script('jquery');
+    wp_enqueue_script('ld-exporter-admin', plugin_dir_url(__FILE__) . 'admin.js', ['jquery'], '1.0', true);
+
+    // Localize script with AJAX URL and nonce
+    wp_localize_script('ld-exporter-admin', 'ld_ajax', [
+        'ajax_url' => admin_url('admin-ajax.php'),
+        'nonce' => wp_create_nonce('ld_count_nonce')
+    ]);
+});
 ?>

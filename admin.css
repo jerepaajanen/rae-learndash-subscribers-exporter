@@ -1,0 +1,22 @@
+/* Admin styles for RAE LearnDash Subscribers Exporter */
+
+/* Make the plugin card full width and nice spacing */
+.rae-ld-exporter.card,
+#rae-ld-exporter.card {
+  width: 100%;
+  max-width: none; /* override wp-admin card max width if any */
+  box-sizing: border-box;
+}
+
+/* Count row styling */
+#rae-export-summary { margin-top: 12px; }
+
+#export-count-display { display: inline-flex; align-items: center; gap: 8px; min-height: 22px; }
+
+.count-badge { background:#eaf5ff; color:#0a66c2; padding:3px 10px; border-radius:999px; font-weight:500; font-size:12px; line-height:1.4; white-space:nowrap; }
+
+/* Ensure spinner shows fully and doesn't clip */
+#export-count-display .spinner.is-active { visibility: visible; float: none; margin: 0; width: 16px; height: 16px; }
+
+/* Hide course row by default; JS toggles */
+#course-selection { display: none; }
