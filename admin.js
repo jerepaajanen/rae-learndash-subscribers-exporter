@@ -10,8 +10,8 @@ jQuery(document).ready(function($) {
             return;
         }
         
-        // Show loading state
-        $('#export-count-display').html('<span class="spinner is-active" style="float: none; margin: 0;"></span>');
+    // Show loading state (use WP spinner, styling handled in admin.css)
+    $('#export-count-display').html('<span class="spinner is-active" aria-hidden="true"></span>');
         
         // Make AJAX request
         $.post(ld_ajax.ajax_url, {
@@ -41,10 +41,10 @@ jQuery(document).ready(function($) {
         if (exportType === 'all') {
             message = `Will export ${count} subscribers`;
         } else if (exportType === 'enrolled') {
-            message = `Will export ${count} subscribers enrolled in any course`;
+            message = `Will export ${count} subscribers`;
         } else if (exportType === 'specific' && courseId > 0) {
             const courseName = $('#course_id option:selected').text();
-            message = `Will export ${count} subscribers from "${courseName}"`;
+            message = `Will export ${count} subscribers`;
         }
         
         $('#export-count-display').html(`<span class="count-badge">${message}</span>`);

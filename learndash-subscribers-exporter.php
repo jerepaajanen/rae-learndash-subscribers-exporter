@@ -95,11 +95,8 @@ function ld_export_page() {
                 
                 <p class="submit">
                     <input type="submit" name="export_ld_emails" class="button button-primary" value="Export to Excel">
-                </p>
-
-                <div id="rae-export-summary">
                     <span id="export-count-display" class="count-display" role="status" aria-live="polite"></span>
-                </div>
+                </p>
             </form>
         </div>
     </div>
@@ -173,16 +170,12 @@ function ld_export_subscriber_emails($export_type = 'all', $course_id = 0) {
             if (function_exists('learndash_user_get_enrolled_courses')) {
                 $enrolled_courses = learndash_user_get_enrolled_courses($user->ID);
                 
-                // Skip user if they're not enrolled in any course
-                if ($export_type === 'enrolled' && empty($enrolled_courses)) {
-                    $include_user = false;
-                }
-                
-                // Skip user if they're not enrolled in the specific course
-                if ($export_type === 'specific') {
-                    if (!in_array($course_id, $enrolled_courses)) {
-                        $include_user = false;
-                    }
+                // For Open courses, LD may grant access without explicit enrollment.
+                // Require explicit enrollment (course_*_access_from meta) to include.
+                if ($export_type === 'enrolled') {
+                    $include_user = ld_user_has_any_explicit_course_enrollment($user->ID, $enrolled_courses);
+                } elseif ($export_type === 'specific') {
+                    $include_user = ld_user_has_explicit_course_enrollment($user->ID, $course_id);
                 }
             } else {
                 // LearnDash functions not available
@@ -227,9 +220,9 @@ function ld_export_subscriber_emails($export_type = 'all', $course_id = 0) {
                 
                 // Get enrollment date (using user meta or best estimate)
                 $enrollment_date = '';
-                $course_access_list = get_user_meta($user->ID, 'learndash_course_' . $course_id . '_access_from', true);
-                if (!empty($course_access_list)) {
-                    $enrollment_date = date('Y-m-d H:i:s', $course_access_list);
+                $access_ts = ld_get_course_access_from($user->ID, $course_id);
+                if (!empty($access_ts)) {
+                    $enrollment_date = date('Y-m-d H:i:s', $access_ts);
                 }
                 $user_data[] = $enrollment_date;
             }
@@ -295,15 +288,13 @@ function ld_get_subscriber_count($export_type = 'all', $course_id = 0) {
         
         foreach ($user_ids as $user_id) {
             $enrolled_courses = learndash_user_get_enrolled_courses($user_id);
-            
+
             if ($export_type === 'enrolled') {
-                // Count users enrolled in any course
-                if (!empty($enrolled_courses)) {
+                if (ld_user_has_any_explicit_course_enrollment($user_id, $enrolled_courses)) {
                     $count++;
                 }
             } elseif ($export_type === 'specific' && $course_id > 0) {
-                // Count users enrolled in specific course
-                if (is_array($enrolled_courses) && in_array($course_id, $enrolled_courses)) {
+                if (ld_user_has_explicit_course_enrollment($user_id, $course_id)) {
                     $count++;
                 }
             }
@@ -315,6 +306,48 @@ function ld_get_subscriber_count($export_type = 'all', $course_id = 0) {
         error_log('LD Exporter Count Calculation Error: ' . $e->getMessage());
         throw $e;
     }
+}
+
+// Helpers: explicit enrollment detection (ignores access from Open courses)
+function ld_get_course_access_from($user_id, $course_id) {
+    // Primary key used by LearnDash
+    $ts = get_user_meta($user_id, 'course_' . $course_id . '_access_from', true);
+    if (!empty($ts)) {
+        return intval($ts);
+    }
+    // Back-compat or alternate key some installs used
+    $ts_alt = get_user_meta($user_id, 'learndash_course_' . $course_id . '_access_from', true);
+    if (!empty($ts_alt)) {
+        return intval($ts_alt);
+    }
+    return 0;
+}
+
+function ld_user_has_explicit_course_enrollment($user_id, $course_id) {
+    if (empty($course_id)) return false;
+    return ld_get_course_access_from($user_id, $course_id) > 0;
+}
+
+function ld_user_has_any_explicit_course_enrollment($user_id, $enrolled_courses = []) {
+    // If we already have LD's enrolled courses, filter them; otherwise, scan user meta keys.
+    if (is_array($enrolled_courses) && !empty($enrolled_courses)) {
+        foreach ($enrolled_courses as $cid) {
+            if (ld_user_has_explicit_course_enrollment($user_id, $cid)) {
+                return true;
+            }
+        }
+        return false;
+    }
+    // Fallback: scan user meta for any course_*_access_from
+    $all_meta = get_user_meta($user_id);
+    foreach ($all_meta as $key => $vals) {
+        if (strpos($key, 'course_') === 0 && str_ends_with($key, '_access_from')) {
+            if (!empty($vals) && intval($vals[0]) > 0) {
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
 // Enqueue scripts and styles for admin page

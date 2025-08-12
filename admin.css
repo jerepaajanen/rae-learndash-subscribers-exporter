@@ -11,12 +11,13 @@
 /* Count row styling */
 #rae-export-summary { margin-top: 12px; }
 
-#export-count-display { display: inline-flex; align-items: center; gap: 8px; min-height: 22px; }
+#export-count-display { display: inline-flex; align-items: center; gap: 8px; min-height: 20px; line-height: 1; }
 
-.count-badge { background:#eaf5ff; color:#0a66c2; padding:3px 10px; border-radius:999px; font-weight:500; font-size:12px; line-height:1.4; white-space:nowrap; }
+.count-badge { background:#eaf5ff; color:#0a66c2; border-radius:999px; font-weight:500; font-size:12px; white-space:nowrap; display:inline-flex; align-items:center; height:20px; line-height:20px; padding:0 10px; }
 
 /* Ensure spinner shows fully and doesn't clip */
-#export-count-display .spinner.is-active { visibility: visible; float: none; margin: 0; width: 16px; height: 16px; }
+#export-count-display .spinner { float: none; margin: 0; }
+#export-count-display .spinner.is-active { visibility: visible; width: 20px; height: 20px; display: inline-block; }
 
 /* Hide course row by default; JS toggles */
 #course-selection { display: none; }
