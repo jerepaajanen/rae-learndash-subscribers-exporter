@@ -21,3 +21,16 @@
 
 /* Hide course row by default; JS toggles */
 #course-selection { display: none; }
+
+/* Native-like full-row bordered box for Select Course area */
+.rae-rowbox-cell { padding: 0 !important; }
+.rae-rowbox {
+  border: 1px solid #dcdcde; /* WP gray-300 */
+  border-radius: 4px;
+  padding: 12px;
+  background: #fff;
+  margin: 8px 0;
+}
+.rae-rowbox-label { display: block; font-weight: 600; margin-bottom: 6px; }
+.rae-rowbox select { min-width: 280px; }
+.rae-rowbox .notice.inline { margin: 8px 0 0; }

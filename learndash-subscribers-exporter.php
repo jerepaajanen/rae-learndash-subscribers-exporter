@@ -2,14 +2,26 @@
 /**
  * Plugin Name: RAE Learndash Subscribers Exporter
  * Description: Export emails of WordPress subscribers enrolled in any Learndash course.
- * Version: 1.0
+ * Version: 1.1.0
  * Author: Rae Agency
  * Author URI: https://www.rae.fi
+ * Text Domain: rae-ld-exporter
  */
 
 // Exit if accessed directly
 if (!defined('ABSPATH')) {
     exit;
+}
+
+// Plugin constants
+if (!defined('RAE_LD_EXPORTER_VERSION')) {
+    define('RAE_LD_EXPORTER_VERSION', '1.1.0');
+}
+if (!defined('RAE_LD_EXPORTER_URL')) {
+    define('RAE_LD_EXPORTER_URL', plugin_dir_url(__FILE__));
+}
+if (!defined('RAE_LD_EXPORTER_PATH')) {
+    define('RAE_LD_EXPORTER_PATH', plugin_dir_path(__FILE__));
 }
 
 // Hook into admin_init to handle export before headers are sent
@@ -78,17 +90,21 @@ function ld_export_page() {
                     </tr>
                     
                     <tr id="course-selection">
-                        <th scope="row">Select Course:</th>
-                        <td>
-                            <select name="course_id" id="course_id">
-                                <option value="">-- Select Course --</option>
-                                <?php foreach ($courses as $id => $title): ?>
-                                    <option value="<?php echo esc_attr($id); ?>"><?php echo esc_html($title); ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                            <?php if (empty($courses)): ?>
-                                <p class="description" style="color: red;">No LearnDash courses found.</p>
-                            <?php endif; ?>
+                        <td colspan="2" class="rae-rowbox-cell">
+                            <div class="rae-rowbox">
+                                <label for="course_id" class="rae-rowbox-label">Select Course</label>
+                                <select name="course_id" id="course_id">
+                                    <option value="">-- Select Course --</option>
+                                    <?php foreach ($courses as $id => $title): ?>
+                                        <option value="<?php echo esc_attr($id); ?>"><?php echo esc_html($title); ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                                <?php if (empty($courses)): ?>
+                                    <div class="notice notice-warning inline" style="margin-top:8px;">
+                                        <p>No LearnDash courses found.</p>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
                         </td>
                     </tr>
                 </table>
