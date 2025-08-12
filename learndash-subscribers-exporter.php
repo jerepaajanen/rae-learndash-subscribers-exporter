@@ -1,6 +1,6 @@
 <?php
 /**
- * Plugin Name: Learndash Subscribers Exporter
+ * Plugin Name: RAE Learndash Subscribers Exporter
  * Description: Export emails of WordPress subscribers enrolled in any Learndash course.
  * Version: 1.0
  * Author: Rae Agency
