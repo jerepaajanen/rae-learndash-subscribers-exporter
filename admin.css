@@ -30,7 +30,19 @@
   padding: 12px;
   background: #fff;
   margin: 8px 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap; /* allow wrapping on narrow screens */
 }
-.rae-rowbox-label { display: block; font-weight: 600; margin-bottom: 6px; }
+.rae-rowbox-label {
+  display: inline-block;
+  font-weight: 600;
+  margin: 0; /* no bottom margin when inline */
+  min-width: 200px; /* align like other form labels */
+}
 .rae-rowbox select { min-width: 280px; }
-.rae-rowbox .notice.inline { margin: 8px 0 0; }
+.rae-rowbox .notice.inline {
+  margin: 8px 0 0;
+  flex: 0 0 100%; /* push notices below the row */
+}

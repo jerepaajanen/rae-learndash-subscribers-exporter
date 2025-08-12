@@ -6,7 +6,7 @@ jQuery(document).ready(function($) {
         
         // For specific course type, don't update unless a course is selected
         if (exportType === 'specific' && courseId === 0) {
-            $('#export-count-display').html('<span class="count-badge">Select a course to see count</span>');
+            $('#export-count-display').html('<span class="count-badge">' + (ld_ajax?.strings?.select_course_prompt || 'Select a course to see count') + '</span>');
             return;
         }
         
@@ -25,26 +25,28 @@ jQuery(document).ready(function($) {
                 updateCountDisplay(exportType, courseId, response.data.count);
             } else {
                 console.error('Error getting count:', response.data);
-                $('#export-count-display').html('<span style="color: red;">Error: ' + (response.data || 'Unknown error') + '</span>');
+                var errPrefix = (ld_ajax?.strings?.error_prefix || 'Error:');
+                $('#export-count-display').html('<span style="color: red;">' + errPrefix + ' ' + (response.data || 'Unknown error') + '</span>');
             }
         })
         .fail(function(xhr, status, error) {
             console.error('AJAX request failed:', xhr.responseText);
-            $('#export-count-display').html('<span style="color: red;">Connection error</span>');
+            var connErr = (ld_ajax?.strings?.connection_error || 'Connection error');
+            $('#export-count-display').html('<span style="color: red;">' + connErr + '</span>');
         });
     }
     
     // Function to update the count display based on current selection
     function updateCountDisplay(exportType, courseId, count) {
-        let message = '';
+    let message = '';
         
+        var tpl = (ld_ajax?.strings?.will_export || 'Will export %s subscribers');
         if (exportType === 'all') {
-            message = `Will export ${count} subscribers`;
+            message = tpl.replace('%s', count);
         } else if (exportType === 'enrolled') {
-            message = `Will export ${count} subscribers`;
+            message = tpl.replace('%s', count);
         } else if (exportType === 'specific' && courseId > 0) {
-            const courseName = $('#course_id option:selected').text();
-            message = `Will export ${count} subscribers`;
+            message = tpl.replace('%s', count);
         }
         
         $('#export-count-display').html(`<span class="count-badge">${message}</span>`);

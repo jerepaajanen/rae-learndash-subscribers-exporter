@@ -1,0 +1,76 @@
+msgid ""
+msgstr ""
+"Language: fi_FI\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+
+msgid "Export Learndash Subscribers"
+msgstr "Vie Learndash-tilaajat"
+
+msgid "Export Options"
+msgstr "Viennin asetukset"
+
+msgid "Export Type:"
+msgstr "Viennin tyyppi:"
+
+msgid "All Subscribers"
+msgstr "Kaikki tilaajat"
+
+msgid "All Subscribers Enrolled in Any Course"
+msgstr "Kaikki tilaajat, joilla on jokin kurssi"
+
+msgid "Subscribers Enrolled in Specific Course"
+msgstr "Tilaajat, joilla on tietty kurssi"
+
+msgid "Select Course"
+msgstr "Valitse kurssi"
+
+msgid "No Learndash courses found."
+msgstr "Learndash-kursseja ei löytynyt."
+
+msgid "Export to Excel"
+msgstr "Vie Exceliin"
+
+msgid "Learndash is not active. Please activate Learndash to use this feature."
+msgstr "Learndash ei ole aktiivinen. Aktivoi Learndash käyttääksesi tätä toimintoa."
+
+msgid "User ID"
+msgstr "Käyttäjä-ID"
+
+msgid "Email"
+msgstr "Sähköposti"
+
+msgid "Name"
+msgstr "Nimi"
+
+msgid "Registration Date"
+msgstr "Rekisteröitymispäivä"
+
+msgid "Enrolled Courses"
+msgstr "Kurssit"
+
+msgid "Course Progress"
+msgstr "Kurssin eteneminen"
+
+msgid "Course Status"
+msgstr "Kurssin tila"
+
+msgid "Enrollment Date"
+msgstr "Liittymispäivä"
+
+msgid "Invalid nonce"
+msgstr "Virheellinen nonce"
+
+msgid "Error calculating count: %s"
+msgstr "Virhe laskettaessa lukumäärää: %s"
+
+msgid "Select a course to see count"
+msgstr "Valitse kurssi nähdäksesi määrän"
+
+msgid "Will export %s subscribers"
+msgstr "Viedään %s tilaajaa"
+
+msgid "Error:"
+msgstr "Virhe:"
+
+msgid "Connection error"
+msgstr "Yhteysvirhe"

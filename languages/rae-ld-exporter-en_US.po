@@ -1,0 +1,76 @@
+msgid ""
+msgstr ""
+"Language: en_US\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+
+msgid "Export Learndash Subscribers"
+msgstr "Export Learndash Subscribers"
+
+msgid "Export Options"
+msgstr "Export Options"
+
+msgid "Export Type:"
+msgstr "Export Type:"
+
+msgid "All Subscribers"
+msgstr "All Subscribers"
+
+msgid "All Subscribers Enrolled in Any Course"
+msgstr "All Subscribers Enrolled in Any Course"
+
+msgid "Subscribers Enrolled in Specific Course"
+msgstr "Subscribers Enrolled in Specific Course"
+
+msgid "Select Course"
+msgstr "Select Course"
+
+msgid "No Learndash courses found."
+msgstr "No Learndash courses found."
+
+msgid "Export to Excel"
+msgstr "Export to Excel"
+
+msgid "Learndash is not active. Please activate Learndash to use this feature."
+msgstr "Learndash is not active. Please activate Learndash to use this feature."
+
+msgid "User ID"
+msgstr "User ID"
+
+msgid "Email"
+msgstr "Email"
+
+msgid "Name"
+msgstr "Name"
+
+msgid "Registration Date"
+msgstr "Registration Date"
+
+msgid "Enrolled Courses"
+msgstr "Enrolled Courses"
+
+msgid "Course Progress"
+msgstr "Course Progress"
+
+msgid "Course Status"
+msgstr "Course Status"
+
+msgid "Enrollment Date"
+msgstr "Enrollment Date"
+
+msgid "Invalid nonce"
+msgstr "Invalid nonce"
+
+msgid "Error calculating count: %s"
+msgstr "Error calculating count: %s"
+
+msgid "Select a course to see count"
+msgstr "Select a course to see count"
+
+msgid "Will export %s subscribers"
+msgstr "Will export %s subscribers"
+
+msgid "Error:"
+msgstr "Error:"
+
+msgid "Connection error"
+msgstr "Connection error"

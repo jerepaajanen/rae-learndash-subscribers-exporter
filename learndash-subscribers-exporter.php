@@ -35,7 +35,13 @@ add_action('admin_init', function () {
 
 // Add submenu under Users
 add_action('admin_menu', function () {
-    add_users_page('Export LD Subscribers', 'Export LD Subscribers', 'manage_options', 'ld-subscribers-export', 'ld_export_page');
+    add_users_page(
+    __('Export Learndash Subscribers', 'rae-ld-exporter'),
+    __('Export Learndash Subscribers', 'rae-ld-exporter'),
+        'manage_options',
+        'ld-subscribers-export',
+        'ld_export_page'
+    );
 });
 
 // Render the admin page
@@ -60,30 +66,30 @@ function ld_export_page() {
     }
     ?>
     <div class="wrap">
-        <h1>Export Learndash Subscribers</h1>
+    <h1><?php echo esc_html__('Export Learndash Subscribers', 'rae-ld-exporter'); ?></h1>
         
         <div class="card rae-ld-exporter" id="rae-ld-exporter">
-            <h2>Export Options</h2>
+            <h2><?php echo esc_html__('Export Options', 'rae-ld-exporter'); ?></h2>
             <form method="post">
                 <?php wp_nonce_field('ld_export_action', 'ld_export_nonce'); ?>
                 
                 <table class="form-table">
                     <tr>
-                        <th scope="row">Export Type:</th>
+                        <th scope="row"><?php echo esc_html__('Export Type:', 'rae-ld-exporter'); ?></th>
                         <td>
                             <fieldset>
                                 <legend class="screen-reader-text">Export Type</legend>
                                 <label>
                                     <input type="radio" name="export_type" value="all" checked>
-                                    All Subscribers
+                                    <?php echo esc_html__('All Subscribers', 'rae-ld-exporter'); ?>
                                 </label><br>
                                 <label>
                                     <input type="radio" name="export_type" value="enrolled">
-                                    All Subscribers Enrolled in Any Course
+                                    <?php echo esc_html__('All Subscribers Enrolled in Any Course', 'rae-ld-exporter'); ?>
                                 </label><br>
                                 <label>
                                     <input type="radio" name="export_type" value="specific">
-                                    Subscribers Enrolled in Specific Course
+                                    <?php echo esc_html__('Subscribers Enrolled in Specific Course', 'rae-ld-exporter'); ?>
                                 </label>
                             </fieldset>
                         </td>
@@ -92,16 +98,16 @@ function ld_export_page() {
                     <tr id="course-selection">
                         <td colspan="2" class="rae-rowbox-cell">
                             <div class="rae-rowbox">
-                                <label for="course_id" class="rae-rowbox-label">Select Course</label>
+                                <label for="course_id" class="rae-rowbox-label"><?php echo esc_html__('Select Course', 'rae-ld-exporter'); ?></label>
                                 <select name="course_id" id="course_id">
-                                    <option value="">-- Select Course --</option>
+                                    <option value="">-- <?php echo esc_html__('Select Course', 'rae-ld-exporter'); ?> --</option>
                                     <?php foreach ($courses as $id => $title): ?>
                                         <option value="<?php echo esc_attr($id); ?>"><?php echo esc_html($title); ?></option>
                                     <?php endforeach; ?>
                                 </select>
                                 <?php if (empty($courses)): ?>
                                     <div class="notice notice-warning inline" style="margin-top:8px;">
-                                        <p>No LearnDash courses found.</p>
+                                        <p><?php echo esc_html__('No Learndash courses found.', 'rae-ld-exporter'); ?></p>
                                     </div>
                                 <?php endif; ?>
                             </div>
@@ -110,7 +116,7 @@ function ld_export_page() {
                 </table>
                 
                 <p class="submit">
-                    <input type="submit" name="export_ld_emails" class="button button-primary" value="Export to Excel">
+                    <input type="submit" name="export_ld_emails" class="button button-primary" value="<?php echo esc_attr__('Export to Excel', 'rae-ld-exporter'); ?>">
                     <span id="export-count-display" class="count-display" role="status" aria-live="polite"></span>
                 </p>
             </form>
@@ -123,7 +129,7 @@ function ld_export_page() {
 function ld_export_subscriber_emails($export_type = 'all', $course_id = 0) {
     // Verify LearnDash is active
     if (!function_exists('learndash_user_get_enrolled_courses') && $export_type !== 'all') {
-        wp_die('LearnDash is not active. Please activate LearnDash to use this feature.');
+        wp_die(esc_html__('Learndash is not active. Please activate Learndash to use this feature.', 'rae-ld-exporter'));
     }
     
     // Set up the query
@@ -159,15 +165,20 @@ function ld_export_subscriber_emails($export_type = 'all', $course_id = 0) {
     fputs($output, "\xEF\xBB\xBF");
     
     // Define headers based on export type
-    $headers = ['User ID', 'Email', 'Name', 'Registration Date'];
+    $headers = [
+        __('User ID', 'rae-ld-exporter'),
+        __('Email', 'rae-ld-exporter'),
+        __('Name', 'rae-ld-exporter'),
+        __('Registration Date', 'rae-ld-exporter'),
+    ];
     
     if ($export_type === 'enrolled' || $export_type === 'specific') {
-        $headers[] = 'Enrolled Courses';
+        $headers[] = __('Enrolled Courses', 'rae-ld-exporter');
         
         if ($export_type === 'specific') {
-            $headers[] = 'Course Progress';
-            $headers[] = 'Course Status';
-            $headers[] = 'Enrollment Date';
+            $headers[] = __('Course Progress', 'rae-ld-exporter');
+            $headers[] = __('Course Status', 'rae-ld-exporter');
+            $headers[] = __('Enrollment Date', 'rae-ld-exporter');
         }
     }
     
@@ -186,7 +197,7 @@ function ld_export_subscriber_emails($export_type = 'all', $course_id = 0) {
             if (function_exists('learndash_user_get_enrolled_courses')) {
                 $enrolled_courses = learndash_user_get_enrolled_courses($user->ID);
                 
-                // For Open courses, LD may grant access without explicit enrollment.
+                // For Open courses, Learndash may grant access without explicit enrollment.
                 // Require explicit enrollment (course_*_access_from meta) to include.
                 if ($export_type === 'enrolled') {
                     $include_user = ld_user_has_any_explicit_course_enrollment($user->ID, $enrolled_courses);
@@ -261,7 +272,7 @@ add_action('wp_ajax_ld_get_subscriber_count', 'ld_get_subscriber_count_ajax');
 function ld_get_subscriber_count_ajax() {
     // Check nonce for security
     if (!check_ajax_referer('ld_count_nonce', 'nonce', false)) {
-        wp_send_json_error('Invalid nonce');
+        wp_send_json_error(esc_html__('Invalid nonce', 'rae-ld-exporter'));
         return;
     }
 
@@ -270,10 +281,10 @@ function ld_get_subscriber_count_ajax() {
     
     try {
         $count = ld_get_subscriber_count($export_type, $course_id);
-        wp_send_json_success(['count' => $count]);
+    wp_send_json_success(['count' => $count]);
     } catch (Exception $e) {
         error_log('LD Exporter Count Error: ' . $e->getMessage());
-        wp_send_json_error('Error calculating count: ' . $e->getMessage());
+    wp_send_json_error(sprintf(esc_html__('Error calculating count: %s', 'rae-ld-exporter'), $e->getMessage()));
     }
 }
 
@@ -375,12 +386,23 @@ add_action('admin_enqueue_scripts', function($hook) {
     wp_enqueue_style('ld-exporter-admin', plugin_dir_url(__FILE__) . 'admin.css', [], '1.0');
 
     wp_enqueue_script('jquery');
-    wp_enqueue_script('ld-exporter-admin', plugin_dir_url(__FILE__) . 'admin.js', ['jquery'], '1.0', true);
+    wp_enqueue_script('ld-exporter-admin', plugin_dir_url(__FILE__) . 'admin.js', ['jquery'], RAE_LD_EXPORTER_VERSION, true);
 
     // Localize script with AJAX URL and nonce
     wp_localize_script('ld-exporter-admin', 'ld_ajax', [
         'ajax_url' => admin_url('admin-ajax.php'),
-        'nonce' => wp_create_nonce('ld_count_nonce')
+        'nonce' => wp_create_nonce('ld_count_nonce'),
+        'strings' => [
+            'select_course_prompt' => esc_html__('Select a course to see count', 'rae-ld-exporter'),
+            'will_export' => esc_html__('Will export %s subscribers', 'rae-ld-exporter'),
+            'error_prefix' => esc_html__('Error:', 'rae-ld-exporter'),
+            'connection_error' => esc_html__('Connection error', 'rae-ld-exporter'),
+        ],
     ]);
+});
+
+// Load translations
+add_action('plugins_loaded', function() {
+    load_plugin_textdomain('rae-ld-exporter', false, dirname(plugin_basename(__FILE__)) . '/languages');
 });
 ?>
