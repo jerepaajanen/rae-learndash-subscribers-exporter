@@ -3,6 +3,7 @@ jQuery(document).ready(function($) {
     function updateCounts() {
         const exportType = $('input[name="export_type"]:checked').val();
         const courseId = $('#course_id').val() || 0;
+    const includeEnrolled = $('#include_enrolled').is(':checked') ? 1 : 0;
         
         // For specific course type, don't update unless a course is selected
         if (exportType === 'specific' && courseId === 0) {
@@ -18,6 +19,7 @@ jQuery(document).ready(function($) {
             action: 'ld_get_subscriber_count',
             export_type: exportType,
             course_id: courseId,
+            include_enrolled: includeEnrolled,
             nonce: ld_ajax.nonce
         })
         .done(function(response) {
@@ -58,8 +60,14 @@ jQuery(document).ready(function($) {
         
         if (selectedType === 'specific') {
             $('#course-selection').show();
+            $('#include-enrolled-row').show();
         } else {
             $('#course-selection').hide();
+            if (selectedType === 'enrolled') {
+                $('#include-enrolled-row').show();
+            } else {
+                $('#include-enrolled-row').hide();
+            }
         }
         
         // Update counts when selection changes
@@ -76,6 +84,21 @@ jQuery(document).ready(function($) {
         }
     });
     
+    // Handle include_enrolled toggle
+    $('#include_enrolled').change(function() {
+        const exportType = $('input[name="export_type"]:checked').val();
+        if (exportType === 'enrolled' || exportType === 'specific') {
+            updateCounts();
+        }
+    });
+    
     // Load initial counts
+    // Set initial visibility of include-enrolled row
+    const initialType = $('input[name="export_type"]:checked').val();
+    if (initialType === 'enrolled' || initialType === 'specific') {
+        $('#include-enrolled-row').show();
+    } else {
+        $('#include-enrolled-row').hide();
+    }
     updateCounts();
 });

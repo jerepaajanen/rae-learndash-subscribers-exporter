@@ -2,7 +2,7 @@
 /**
  * Plugin Name: RAE Learndash Subscribers Exporter
  * Description: Export emails of WordPress subscribers enrolled in any Learndash course.
- * Version: 1.1.0
+ * Version: 1.2.0
  * Author: Rae Agency
  * Author URI: https://www.rae.fi
  * Text Domain: rae-ld-exporter
@@ -15,7 +15,7 @@ if (!defined('ABSPATH')) {
 
 // Plugin constants
 if (!defined('RAE_LD_EXPORTER_VERSION')) {
-    define('RAE_LD_EXPORTER_VERSION', '1.1.0');
+    define('RAE_LD_EXPORTER_VERSION', '1.2.0');
 }
 if (!defined('RAE_LD_EXPORTER_URL')) {
     define('RAE_LD_EXPORTER_URL', plugin_dir_url(__FILE__));
@@ -29,7 +29,8 @@ add_action('admin_init', function () {
     if (isset($_POST['export_ld_emails']) && check_admin_referer('ld_export_action', 'ld_export_nonce')) {
         $export_type = sanitize_text_field($_POST['export_type'] ?? 'all');
         $course_id = isset($_POST['course_id']) ? absint($_POST['course_id']) : 0;
-        ld_export_subscriber_emails($export_type, $course_id);
+        $include_enrolled = !empty($_POST['include_enrolled']);
+        ld_export_subscriber_emails($export_type, $course_id, $include_enrolled);
     }
 });
 
@@ -113,6 +114,18 @@ function ld_export_page() {
                             </div>
                         </td>
                     </tr>
+
+                    <tr id="include-enrolled-row" style="display:none;">
+                        <td colspan="2" class="rae-rowbox-cell">
+                            <div class="rae-rowbox">
+                                <label for="include_enrolled" class="rae-rowbox-label"><?php echo esc_html__('Include explicit enrollments', 'rae-ld-exporter'); ?></label>
+                                <label>
+                                    <input type="checkbox" name="include_enrolled" id="include_enrolled" value="1">
+                                    <?php echo esc_html__('Also include users explicitly enrolled without progress', 'rae-ld-exporter'); ?>
+                                </label>
+                            </div>
+                        </td>
+                    </tr>
                 </table>
                 
                 <p class="submit">
@@ -126,7 +139,7 @@ function ld_export_page() {
 }
 
 // Export function
-function ld_export_subscriber_emails($export_type = 'all', $course_id = 0) {
+function ld_export_subscriber_emails($export_type = 'all', $course_id = 0, $include_enrolled = false) {
     // Verify LearnDash is active
     if (!function_exists('learndash_user_get_enrolled_courses') && $export_type !== 'all') {
         wp_die(esc_html__('Learndash is not active. Please activate Learndash to use this feature.', 'rae-ld-exporter'));
@@ -165,20 +178,28 @@ function ld_export_subscriber_emails($export_type = 'all', $course_id = 0) {
     fputs($output, "\xEF\xBB\xBF");
     
     // Define headers based on export type
-    $headers = [
-        __('User ID', 'rae-ld-exporter'),
-        __('Email', 'rae-ld-exporter'),
-        __('Name', 'rae-ld-exporter'),
-        __('Registration Date', 'rae-ld-exporter'),
-    ];
-    
-    if ($export_type === 'enrolled' || $export_type === 'specific') {
-        $headers[] = __('Enrolled Courses', 'rae-ld-exporter');
+    if ($export_type === 'specific') {
+        // For specific course export, use the exact schema requested
+        $headers = [
+            __('User ID', 'rae-ld-exporter'),
+            __('Email', 'rae-ld-exporter'),
+            __('Name', 'rae-ld-exporter'),
+            __('Course ID', 'rae-ld-exporter'),
+            __('Started', 'rae-ld-exporter'),
+            __('Percent', 'rae-ld-exporter'),
+            __('Completed', 'rae-ld-exporter'),
+            __('Completed At', 'rae-ld-exporter'),
+        ];
+    } else {
+        $headers = [
+            __('User ID', 'rae-ld-exporter'),
+            __('Email', 'rae-ld-exporter'),
+            __('Name', 'rae-ld-exporter'),
+            __('Registration Date', 'rae-ld-exporter'),
+        ];
         
-        if ($export_type === 'specific') {
-            $headers[] = __('Course Progress', 'rae-ld-exporter');
-            $headers[] = __('Course Status', 'rae-ld-exporter');
-            $headers[] = __('Enrollment Date', 'rae-ld-exporter');
+        if ($export_type === 'enrolled') {
+            $headers[] = __('Enrolled Courses', 'rae-ld-exporter');
         }
     }
     
@@ -187,77 +208,74 @@ function ld_export_subscriber_emails($export_type = 'all', $course_id = 0) {
     
     // Process each user
     foreach ($users as $user) {
-        $user_data = [$user->ID, $user->user_email, $user->display_name, $user->user_registered];
-        
-        // Get enrolled courses
-        $include_user = true;
-        $enrolled_courses = [];
-        
-        if ($export_type === 'enrolled' || $export_type === 'specific') {
-            if (function_exists('learndash_user_get_enrolled_courses')) {
-                $enrolled_courses = learndash_user_get_enrolled_courses($user->ID);
-                
-                // For Open courses, Learndash may grant access without explicit enrollment.
-                // Require explicit enrollment (course_*_access_from meta) to include.
-                if ($export_type === 'enrolled') {
-                    $include_user = ld_user_has_any_explicit_course_enrollment($user->ID, $enrolled_courses);
-                } elseif ($export_type === 'specific') {
-                    $include_user = ld_user_has_explicit_course_enrollment($user->ID, $course_id);
-                }
-            } else {
-                // LearnDash functions not available
-                $include_user = ($export_type === 'all');
-            }
-            
-            if ($include_user && $export_type === 'enrolled') {
-                $course_titles = [];
-                foreach ($enrolled_courses as $c_id) {
-                    $course_titles[] = get_the_title($c_id);
-                }
-                $user_data[] = implode(', ', $course_titles);
-            }
-            
-            // Add course-specific data for specific course export
-            if ($include_user && $export_type === 'specific' && $course_id > 0) {
-                // For "specific" export, add enrolled courses
-                $course_titles = [];
-                foreach ($enrolled_courses as $c_id) {
-                    $course_titles[] = get_the_title($c_id);
-                }
-                $user_data[] = implode(', ', $course_titles);
-                
-                // Get course progress
-                $progress = 0;
-                if (function_exists('learndash_course_progress')) {
-                    $course_progress = learndash_course_progress([
-                        'user_id'   => $user->ID,
-                        'course_id' => $course_id,
-                        'array'     => true
-                    ]);
-                    $progress = $course_progress['percentage'] ?? 0;
-                }
-                $user_data[] = $progress . '%';
-                
-                // Get course status
-                $status = '';
-                if (function_exists('learndash_course_status')) {
-                    $status = learndash_course_status($course_id, $user->ID);
-                }
-                $user_data[] = $status;
-                
-                // Get enrollment date (using user meta or best estimate)
-                $enrollment_date = '';
-                $access_ts = ld_get_course_access_from($user->ID, $course_id);
-                if (!empty($access_ts)) {
-                    $enrollment_date = date('Y-m-d H:i:s', $access_ts);
-                }
-                $user_data[] = $enrollment_date;
-            }
-        }
-        
-        // Write user data if they should be included
-        if ($include_user) {
+        // Build user row based on export type
+        if ($export_type === 'all') {
+            $user_data = [$user->ID, $user->user_email, $user->display_name, $user->user_registered];
             fputcsv($output, $user_data);
+            continue;
+        }
+
+        if ($export_type === 'enrolled') {
+            // Union: progress OR explicit enrollment when checkbox selected
+            $include_user = ld_user_has_any_progress($user->ID);
+            if (!$include_user && $include_enrolled) {
+                $include_user = ld_user_has_any_explicit_course_enrollment($user->ID);
+            }
+            if ($include_user) {
+                $user_data = [$user->ID, $user->user_email, $user->display_name, $user->user_registered];
+                $course_ids_with_progress = ld_get_courses_with_progress($user->ID);
+                if ($include_enrolled) {
+                    $explicit = ld_get_explicitly_enrolled_course_ids($user->ID);
+                    $course_ids_with_progress = array_values(array_unique(array_merge($course_ids_with_progress, $explicit)));
+                }
+                $course_titles = array_map('get_the_title', $course_ids_with_progress);
+                $user_data[] = implode(', ', array_filter($course_titles));
+                fputcsv($output, $user_data);
+            }
+            continue;
+        }
+
+        if ($export_type === 'specific' && $course_id > 0) {
+            $has_progress = ld_user_has_progress_in_course($user->ID, $course_id);
+            $has_explicit = $include_enrolled ? ld_user_has_explicit_course_enrollment($user->ID, $course_id) : false;
+            if (!($has_progress || $has_explicit)) {
+                continue;
+            }
+
+            // Compute progress and completion fields
+            $p = function_exists('learndash_user_get_course_progress') ? learndash_user_get_course_progress($user->ID, $course_id) : [];
+            $completed_at_raw = get_user_meta($user->ID, "course_completed_{$course_id}", true);
+            $percent = 0;
+            if (!empty($p) && is_array($p)) {
+                $total = intval($p['total'] ?? 0);
+                $completed_cnt = intval($p['completed'] ?? 0);
+                $percent = ($total > 0) ? round(($completed_cnt / $total) * 100) : 0;
+            }
+            $started = ($percent > 0 || ld_user_has_course_activity($user->ID, $course_id) || ld_user_has_course_progress_meta($user->ID, $course_id)) ? 'Y' : 'N';
+            $completed_flag = (!empty($completed_at_raw) || (!empty($p['status']) && intval($p['status']) === 100)) ? 'Y' : 'N';
+            $completed_at = '';
+            if (!empty($completed_at_raw)) {
+                $completed_at = is_numeric($completed_at_raw) ? date('Y-m-d H:i:s', intval($completed_at_raw)) : $completed_at_raw;
+            }
+
+            // Optional debug logging if requested
+            if (isset($_GET['ld_debug']) && $_GET['ld_debug'] == '1') {
+                error_log(print_r($p, true));
+                error_log(print_r($completed_at_raw, true));
+            }
+
+            $user_data = [
+                $user->ID,
+                $user->user_email,
+                $user->display_name,
+                $course_id,
+                $started,
+                $percent,
+                $completed_flag,
+                $completed_at,
+            ];
+            fputcsv($output, $user_data);
+            continue;
         }
     }
     
@@ -278,9 +296,10 @@ function ld_get_subscriber_count_ajax() {
 
     $export_type = sanitize_text_field($_POST['export_type'] ?? 'all');
     $course_id = isset($_POST['course_id']) ? absint($_POST['course_id']) : 0;
+    $include_enrolled = !empty($_POST['include_enrolled']);
     
     try {
-        $count = ld_get_subscriber_count($export_type, $course_id);
+    $count = ld_get_subscriber_count($export_type, $course_id, $include_enrolled);
     wp_send_json_success(['count' => $count]);
     } catch (Exception $e) {
         error_log('LD Exporter Count Error: ' . $e->getMessage());
@@ -289,7 +308,7 @@ function ld_get_subscriber_count_ajax() {
 }
 
 // Function to get subscriber count based on export type
-function ld_get_subscriber_count($export_type = 'all', $course_id = 0) {
+function ld_get_subscriber_count($export_type = 'all', $course_id = 0, $include_enrolled = false) {
     try {
         // Set up the query for subscribers
         $args = [
@@ -306,22 +325,22 @@ function ld_get_subscriber_count($export_type = 'all', $course_id = 0) {
             return $total_subscribers;
         }
         
-        // For enrolled and specific course counts, we need LearnDash functions
-        if (!function_exists('learndash_user_get_enrolled_courses')) {
-            return 0; // LearnDash not available
-        }
+        // For enrolled and specific course counts, LearnDash should be available for progress APIs.
+        // But we can still count via activity/meta without direct LD functions.
         
         $count = 0;
         
         foreach ($user_ids as $user_id) {
-            $enrolled_courses = learndash_user_get_enrolled_courses($user_id);
-
             if ($export_type === 'enrolled') {
-                if (ld_user_has_any_explicit_course_enrollment($user_id, $enrolled_courses)) {
+                $has_progress = ld_user_has_any_progress($user_id);
+                $has_enrollment = $include_enrolled ? ld_user_has_any_explicit_course_enrollment($user_id) : false;
+                if ($has_progress || $has_enrollment) {
                     $count++;
                 }
             } elseif ($export_type === 'specific' && $course_id > 0) {
-                if (ld_user_has_explicit_course_enrollment($user_id, $course_id)) {
+                $has_progress = ld_user_has_progress_in_course($user_id, $course_id);
+                $has_enrollment = $include_enrolled ? ld_user_has_explicit_course_enrollment($user_id, $course_id) : false;
+                if ($has_progress || $has_enrollment) {
                     $count++;
                 }
             }
@@ -335,7 +354,7 @@ function ld_get_subscriber_count($export_type = 'all', $course_id = 0) {
     }
 }
 
-// Helpers: explicit enrollment detection (ignores access from Open courses)
+// Helpers: explicit enrollment detection (legacy) and new progress-based detection
 function ld_get_course_access_from($user_id, $course_id) {
     // Primary key used by LearnDash
     $ts = get_user_meta($user_id, 'course_' . $course_id . '_access_from', true);
@@ -375,6 +394,160 @@ function ld_user_has_any_explicit_course_enrollment($user_id, $enrolled_courses 
         }
     }
     return false;
+}
+
+/**
+ * Detect if user has any progress in any course (lesson/topic/quiz/course started or completed)
+ */
+function ld_user_has_any_progress($user_id) {
+    global $wpdb;
+    $ua = $wpdb->prefix . 'learndash_user_activity';
+    // Any activity row of relevant types with started/completed or status=1
+    $sql = $wpdb->prepare(
+        "SELECT 1 FROM {$ua} ua
+         WHERE ua.user_id = %d
+           AND ua.activity_type IN ('lesson','topic','quiz','course')
+           AND (ua.activity_status = 1 OR ua.activity_started IS NOT NULL OR ua.activity_completed IS NOT NULL)
+         LIMIT 1",
+        $user_id
+    );
+    $row = $wpdb->get_var($sql);
+    if (!empty($row)) {
+        return true;
+    }
+    // Fallback to _sfwd-course_progress meta
+    $progress = get_user_meta($user_id, '_sfwd-course_progress', true);
+    if (is_array($progress)) {
+        foreach ($progress as $cid => $data) {
+            if (!empty($data['completed']) && intval($data['completed']) > 0) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+/**
+ * Get all course IDs with explicit enrollment for a user
+ */
+function ld_get_explicitly_enrolled_course_ids($user_id) {
+    $course_ids = [];
+    $all_meta = get_user_meta($user_id);
+    foreach ($all_meta as $key => $vals) {
+        if (strpos($key, 'course_') === 0 && str_ends_with($key, '_access_from')) {
+            $cid = intval(str_replace(['course_', '_access_from'], ['', ''], $key));
+            if ($cid > 0 && !empty($vals) && intval($vals[0]) > 0) {
+                $course_ids[] = $cid;
+            }
+        }
+        if (strpos($key, 'learndash_course_') === 0 && str_ends_with($key, '_access_from')) {
+            $cid = intval(str_replace(['learndash_course_', '_access_from'], ['', ''], $key));
+            if ($cid > 0 && !empty($vals) && intval($vals[0]) > 0) {
+                $course_ids[] = $cid;
+            }
+        }
+    }
+    return array_values(array_unique(array_map('intval', $course_ids)));
+}
+
+/**
+ * Detect if user has any activity rows for a specific course_id
+ */
+function ld_user_has_course_activity($user_id, $course_id) {
+    global $wpdb;
+    $ua = $wpdb->prefix . 'learndash_user_activity';
+    $uam = $wpdb->prefix . 'learndash_user_activity_meta';
+    $sql = $wpdb->prepare(
+        "SELECT ua.activity_id
+         FROM {$ua} ua
+         JOIN {$uam} am ON am.activity_id = ua.activity_id
+         WHERE ua.user_id = %d
+           AND am.activity_meta_key = 'course_id'
+           AND am.activity_meta_value = %d
+           AND ua.activity_type IN ('lesson','topic','quiz','course')
+           AND (ua.activity_status = 1 OR ua.activity_started IS NOT NULL OR ua.activity_completed IS NOT NULL)
+         LIMIT 1",
+        $user_id,
+        $course_id
+    );
+    $row = $wpdb->get_var($sql);
+    return !empty($row);
+}
+
+/**
+ * Detect progress via LearnDash API for a specific course
+ */
+function ld_user_has_course_progress_api($user_id, $course_id) {
+    if (!function_exists('learndash_user_get_course_progress')) {
+        return false;
+    }
+    $p = learndash_user_get_course_progress($user_id, $course_id);
+    if (!is_array($p)) return false;
+    $total = intval($p['total'] ?? 0);
+    $completed = intval($p['completed'] ?? 0);
+    if ($total > 0 && $completed > 0) {
+        return true;
+    }
+    // Some installs may not populate totals; treat status 100 as completed
+    if (!empty($p['status']) && intval($p['status']) === 100) {
+        return true;
+    }
+    return false;
+}
+
+/**
+ * Detect progress via _sfwd-course_progress user meta for a specific course
+ */
+function ld_user_has_course_progress_meta($user_id, $course_id) {
+    $progress = get_user_meta($user_id, '_sfwd-course_progress', true);
+    if (is_array($progress) && isset($progress[$course_id])) {
+        $data = $progress[$course_id];
+        return (!empty($data['completed']) && intval($data['completed']) > 0);
+    }
+    return false;
+}
+
+/**
+ * Combined check for progress in a course
+ */
+function ld_user_has_progress_in_course($user_id, $course_id) {
+    return (
+        ld_user_has_course_progress_api($user_id, $course_id)
+        || ld_user_has_course_activity($user_id, $course_id)
+        || ld_user_has_course_progress_meta($user_id, $course_id)
+    );
+}
+
+/**
+ * Get list of course IDs where the user has progress
+ */
+function ld_get_courses_with_progress($user_id) {
+    global $wpdb;
+    $ua = $wpdb->prefix . 'learndash_user_activity';
+    $uam = $wpdb->prefix . 'learndash_user_activity_meta';
+    $sql = $wpdb->prepare(
+        "SELECT DISTINCT am.activity_meta_value AS course_id
+         FROM {$ua} ua
+         JOIN {$uam} am ON am.activity_id = ua.activity_id
+         WHERE ua.user_id = %d
+           AND am.activity_meta_key = 'course_id'
+           AND ua.activity_type IN ('lesson','topic','quiz','course')
+           AND (ua.activity_status = 1 OR ua.activity_started IS NOT NULL OR ua.activity_completed IS NOT NULL)",
+        $user_id
+    );
+    $course_ids = $wpdb->get_col($sql);
+    // Merge with _sfwd-course_progress meta
+    $progress = get_user_meta($user_id, '_sfwd-course_progress', true);
+    if (is_array($progress)) {
+        foreach ($progress as $cid => $data) {
+            if (!empty($data['completed']) && intval($data['completed']) > 0) {
+                $course_ids[] = $cid;
+            }
+        }
+    }
+    // Unique and cast to ints
+    $course_ids = array_values(array_unique(array_map('intval', $course_ids)));
+    return $course_ids;
 }
 
 // Enqueue scripts and styles for admin page

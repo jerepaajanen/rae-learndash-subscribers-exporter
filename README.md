@@ -1,6 +1,6 @@
 # RAE LearnDash Subscribers Exporter
 
-Export WordPress subscriber emails to CSV, with optional Learndash enrollment details and a live "Will export …" count. Adds an "Export Learndash Subscribers" page under Users in wp-admin.
+Export WordPress subscriber emails to CSV, with LearnDash progress-aware filtering and a live "Will export …" count. Adds an "Export Learndash Subscribers" page under Users in wp-admin.
 
 ## Requirements
 - WordPress (admin access)
@@ -11,20 +11,26 @@ Export WordPress subscriber emails to CSV, with optional Learndash enrollment de
 1. In wp-admin, open Users → Export Learndash Subscribers.
 2. Choose export type (a live count shows how many will be exported):
    - All Subscribers: basic user info for all subscribers.
-  - Enrolled in Any Course: only subscribers enrolled in at least one Learndash course, including a list of enrolled courses.
-   - Specific Course: only subscribers enrolled in the selected course, including progress, status, and enrollment date.
+  - Enrolled in Any Course: subscribers with progress in at least one course. Optionally include explicit enrollments with no progress.
+  - Specific Course: subscribers with progress in the selected course. Optionally include explicit enrollments with no progress. CSV includes started, percent, completed, completed_at.
 3. Click "Export to Excel" to download a UTF‑8 CSV compatible with Excel.
 
 ### CSV columns
-- User ID, Email, Name, Registration Date
-- Plus when filtering by enrollment:
-  - Enrolled Courses
-  - For Specific Course: Course Progress, Course Status, Enrollment Date
+- All Subscribers: User ID, Email, Name, Registration Date
+- Enrolled in Any Course: + Enrolled Courses (from progress and optionally enrollments)
+- Specific Course: user_id, email, display_name, course_id, started(Y/N), percent, completed(Y/N), completed_at
 
 ## Notes
 - File name includes the date, or the course slug when exporting a specific course.
 - If Learndash is not active, only "All Subscribers" export is available.
-- For Learndash courses set to "Open": users are not explicitly enrolled by default. This plugin only counts and exports users with explicit enrollment (based on course_{ID}_access_from user meta), so "Open" courses will show 0 unless users were actually enrolled (manually, via groups, or purchases). This keeps counts accurate and avoids including all site users.
+- Open courses: users aren’t explicitly enrolled by default. This plugin includes users with actual progress. You can also include explicit enrollments without progress via the checkbox.
+
+## Changelog
+
+### 1.2.0
+- Treat enrollment on Open courses as: any logged-in user with progress.
+- Add checkbox to include explicit enrollments without progress.
+- Specific course CSV now: user_id, email, display_name, course_id, started, percent, completed, completed_at.
 
 ## UI/UX
 - The export options are shown inside a full‑width wp-admin card.
