@@ -3,7 +3,7 @@
  * Plugin Name: RAE Learndash Subscribers Exporter
  * Description: Export emails of WordPress subscribers enrolled in any Learndash course.
  * Version: 1.2.0
- * Author: Rae Agency
+ * Author: Rae Agency (Jere Paajanen)
  * Author URI: https://www.rae.fi
  * Text Domain: rae-ld-exporter
  */
